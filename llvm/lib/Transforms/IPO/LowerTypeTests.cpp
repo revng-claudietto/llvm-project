@@ -2184,7 +2184,7 @@ bool LowerTypeTestsModule::lower() {
     ++NumTypeIdDisjointSets;
 
     unsigned MaxUniqueId = 0;
-    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
+    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(*I);
          MI != GlobalClasses.member_end(); ++MI) {
       if (auto *MD = MI->dyn_cast<Metadata *>())
         MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
@@ -2202,7 +2202,7 @@ bool LowerTypeTestsModule::lower() {
     std::vector<GlobalTypeMember *> Globals;
     std::vector<ICallBranchFunnel *> ICallBranchFunnels;
     for (GlobalClassesTy::member_iterator MI =
-             GlobalClasses.member_begin(S.first);
+             GlobalClasses.member_begin(*S.first);
          MI != GlobalClasses.member_end(); ++MI) {
       if (MI->is<Metadata *>())
         TypeIds.push_back(MI->get<Metadata *>());

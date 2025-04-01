@@ -347,14 +347,15 @@ bool Float2IntPass::validateAndTransform() {
   bool MadeChange = false;
 
   // Iterate over every disjoint partition of the def-use graph.
-  for (auto It = ECs.begin(), E = ECs.end(); It != E; ++It) {
+  for (const auto &E : ECs) {
+    if (!E.isLeader())
+      continue;
     ConstantRange R(MaxIntegerBW + 1, false);
     bool Fail = false;
     Type *ConvertedToTy = nullptr;
 
     // For every member of the partition, union all the ranges together.
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI) {
+    for (auto MI = ECs.member_begin(E), ME = ECs.member_end(); MI != ME; ++MI) {
       Instruction *I = *MI;
       auto SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
@@ -384,8 +385,8 @@ bool Float2IntPass::validateAndTransform() {
 
     // If the set was empty, or we failed, or the range is poisonous,
     // bail out.
-    if (ECs.member_begin(It) == ECs.member_end() || Fail ||
-        R.isFullSet() || R.isSignWrappedSet())
+    if (ECs.member_begin(E) == ECs.member_end() || Fail || R.isFullSet() ||
+        R.isSignWrappedSet())
       continue;
     assert(ConvertedToTy && "Must have set the convertedtoty by this point!");
 
@@ -417,7 +418,7 @@ bool Float2IntPass::validateAndTransform() {
     // FIXME: Pick the smallest legal type that will fit.
     Type *Ty = (MinBW > 32) ? Type::getInt64Ty(*Ctx) : Type::getInt32Ty(*Ctx);
 
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
+    for (auto MI = ECs.member_begin(E), ME = ECs.member_end();
          MI != ME; ++MI)
       convert(*MI, Ty);
     MadeChange = true;
