@@ -356,10 +356,8 @@ bool Float2IntPass::validateAndTransform() {
     Type *ConvertedToTy = nullptr;
 
     // For every member of the partition, union all the ranges together.
-    for (auto MI = ECs.member_begin(*E), ME = ECs.member_end(); MI != ME;
-         ++MI) {
-      Instruction *I = *MI;
-      auto SeenI = SeenInsts.find(I);
+    for (Instruction *I : ECs.members(*E)) {
+      auto *SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
         continue;
 
@@ -420,9 +418,8 @@ bool Float2IntPass::validateAndTransform() {
     // FIXME: Pick the smallest legal type that will fit.
     Type *Ty = (MinBW > 32) ? Type::getInt64Ty(*Ctx) : Type::getInt32Ty(*Ctx);
 
-    for (auto MI = ECs.member_begin(*E), ME = ECs.member_end();
-         MI != ME; ++MI)
-      convert(*MI, Ty);
+    for (Instruction *I : ECs.members(*E))
+      convert(I, Ty);
     MadeChange = true;
   }
 
