@@ -55,6 +55,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -74,6 +75,17 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+
+static cl::opt<bool> EmitNestedAnonymousTypes(
+    "codeview-emit-nested-anonymous-types", cl::Hidden,
+    cl::desc("Emit nested anonymous unions/structs as standalone CodeView "
+             "type records referenced by a single field in the parent, "
+             "instead of flattening their members into the parent's field "
+             "list. MSVC-compatible name lookup expects the flat form, but "
+             "consumers that operate on the CodeView type graph (e.g. "
+             "anything reconstructing the C source layout) want the nested "
+             "form."),
+    cl::init(false));
 
 namespace {
 class CVMCAdapter : public CodeViewRecordStreamer {
@@ -2322,6 +2334,17 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
         StaticConstMembers.push_back(DDTy);
     }
 
+    return;
+  }
+
+  // When -codeview-emit-nested-anonymous-types is set, keep the unnamed
+  // member as a single member of the parent record (referencing the nested
+  // struct/union by type index) instead of flattening its indirect fields
+  // below. The nested composite still gets its own complete CodeView type
+  // record via the usual lowering paths.
+  if (EmitNestedAnonymousTypes && DDTy->getBaseType() != nullptr
+      && isa<DICompositeType>(DDTy->getBaseType())) {
+    Info.Members.push_back({DDTy, 0});
     return;
   }
 

@@ -409,6 +409,13 @@ CODEGENOPT(CodeViewGHash, 1, 0)
 /// Whether to emit the compiler path and command line into the CodeView debug information.
 CODEGENOPT(CodeViewCommandLine, 1, 0)
 
+/// Whether anonymous nested unions/structs should be emitted as their own
+/// CodeView type records (LF_UNION / LF_STRUCTURE) referenced by a single
+/// field in the parent record, rather than flattened into the parent's field
+/// list. The flat form matches MSVC name-lookup conventions; the nested form
+/// preserves the source-level type graph for consumers that walk it.
+CODEGENOPT(CodeViewEmitNestedAnonymousTypes, 1, 0)
+
 /// The kind of inlining to perform.
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 

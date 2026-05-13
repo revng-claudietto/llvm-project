@@ -5745,6 +5745,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_working_directory);
   Args.AddLastArg(CmdArgs, options::OPT_fcase_insensitive_paths);
   Args.AddAllArgs(CmdArgs, options::OPT_fdebug_info_allowed_file_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fcodeview_emit_nested_anonymous_types);
 
   RenderARCMigrateToolOptions(D, Args, CmdArgs);
 

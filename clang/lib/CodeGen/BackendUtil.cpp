@@ -536,6 +536,8 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
     BackendArgs.push_back("-limit-float-precision");
     BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
   }
+  if (CodeGenOpts.CodeViewEmitNestedAnonymousTypes)
+    BackendArgs.push_back("-codeview-emit-nested-anonymous-types");
   // Check for the default "clang" invocation that won't set any cl::opt values.
   // Skip trying to parse the command line invocation to avoid the issues
   // described below.

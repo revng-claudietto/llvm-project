@@ -1287,6 +1287,14 @@ def fdebug_info_allowed_file_EQ : Joined<["-"], "fdebug-info-allowed-file=">,
     HelpText<"Emit rich debug info only for declarations from the given file "
              "(repeatable)">,
     MarshallingInfoStringVector<CodeGenOpts<"DebugInfoAllowedFiles">>;
+def fcodeview_emit_nested_anonymous_types
+  : Flag<["-"], "fcodeview-emit-nested-anonymous-types">,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+    HelpText<"Emit nested anonymous unions/structs in CodeView as standalone "
+             "LF_UNION/LF_STRUCTURE records referenced by a single field in "
+             "the parent, instead of flattening their members into the "
+             "parent's field list">,
+    MarshallingInfoFlag<CodeGenOpts<"CodeViewEmitNestedAnonymousTypes">>;
 def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
     Alias<fdebug_compilation_dir_EQ>;
