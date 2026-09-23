@@ -24,9 +24,12 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <functional>
 #include <optional>
+#include <utility>
 
 namespace llvm {
 
@@ -39,8 +42,20 @@ class raw_ostream;
 
 class DemandedBits {
 public:
-  DemandedBits(Function &F, AssumptionCache &AC, DominatorTree &DT) :
-    F(F), AC(AC), DT(DT) {}
+  /// Return a conservative range for a scalar integer operand at this use.
+  /// Full range means unknown. Answers must include every possible undef
+  /// choice, remain stable while this analysis is valid, and not depend on
+  /// demanded bits. The operand's bit width must match the range's bit width.
+  using RangeQuery = std::function<ConstantRange(const Use &)>;
+
+  /// Optionally supplement ValueTracking with ranges from another analysis.
+  /// For example, a loop invariant bounding a shift amount to [0, 8) lets an
+  /// i8 result of lshr i64 demand only the low 15 bits of its source.
+  /// The callable is owned, but any analyses it references must outlive this
+  /// object. Changing the IR or the provider's assumptions invalidates it.
+  DemandedBits(Function &F, AssumptionCache &AC, DominatorTree &DT,
+               RangeQuery GetRange = {})
+      : F(F), AC(AC), DT(DT), GetRange(std::move(GetRange)) {}
 
   /// Return the bits demanded from instruction I.
   ///
@@ -79,7 +94,11 @@ public:
                                            const KnownBits &RHS);
 
 private:
-  /// Compute known bits for an operand at its use.
+  /// Refine Known with a cached provider range and return interval bounds.
+  /// Preserve exact endpoints that KnownBits cannot express. Unsupported or
+  /// contradictory ranges leave Known and its original bounds unchanged.
+  ConstantRange refineOperandRange(const Use &U, KnownBits &Known);
+  /// Supplement ValueTracking with the known bits implied by the provider.
   KnownBits getKnownBits(const Use &U);
   void performAnalysis();
   void determineLiveOperandBits(const Instruction *UserI, unsigned OperandNo,
@@ -89,6 +108,10 @@ private:
   Function &F;
   AssumptionCache &AC;
   DominatorTree &DT;
+  RangeQuery GetRange;
+
+  // A branch-local bound must not constrain a different use of the value.
+  DenseMap<const Use *, ConstantRange> Ranges;
 
   bool Analyzed = false;
 
