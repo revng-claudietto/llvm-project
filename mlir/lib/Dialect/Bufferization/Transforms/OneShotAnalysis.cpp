@@ -180,14 +180,7 @@ void BufferizationAliasInfo::applyOnAliases(
 
 BufferizationAliasInfo::EquivalenceClassRangeType
 BufferizationAliasInfo::getAliases(Value v) const {
-  DenseSet<Value> res;
-  auto it = aliasInfo.findValue(aliasInfo.getLeaderValue(v));
-  for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
-       mit != meit; ++mit) {
-    res.insert(static_cast<Value>(*mit));
-  }
-  return BufferizationAliasInfo::EquivalenceClassRangeType(
-      aliasInfo.member_begin(it), aliasInfo.member_end());
+  return aliasInfo.members(v);
 }
 
 //===----------------------------------------------------------------------===//

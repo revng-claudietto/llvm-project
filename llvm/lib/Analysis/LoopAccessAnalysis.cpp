@@ -63,6 +63,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -494,14 +495,15 @@ void RuntimePointerChecking::groupChecks(
                                            Pointers[I].IsWritePtr);
 
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
+    auto LeaderI = DepCands.findLeader(Access);
 
     // Because DepCands is constructed by visiting accesses in the order in
     // which they appear in alias sets (which is deterministic) and the
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
+    for (auto MI = LeaderI, ME = DepCands.member_end(); MI != ME; ++MI) {
+      auto PointerI = PositionMap.find(MI->getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {
@@ -2031,12 +2033,10 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
       continue;
 
     // Get the relevant memory access set.
-    EquivalenceClasses<MemAccessInfo>::iterator I =
-      AccessSets.findValue(AccessSets.getLeaderValue(CurAccess));
+    auto I = AccessSets.findLeader(CurAccess);
 
     // Check accesses within this set.
-    EquivalenceClasses<MemAccessInfo>::member_iterator AI =
-        AccessSets.member_begin(I);
+    EquivalenceClasses<MemAccessInfo>::member_iterator AI = I;
     EquivalenceClasses<MemAccessInfo>::member_iterator AE =
         AccessSets.member_end();
 

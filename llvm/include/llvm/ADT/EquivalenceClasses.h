@@ -32,9 +32,8 @@ namespace llvm {
 /// addition to these modification methods, it is possible to iterate over all
 /// of the equivalence classes and all of the elements in a class.
 ///
-/// This implementation is an efficient implementation that only stores one copy
-/// of the element being indexed per entry in the set, and allows any arbitrary
-/// type to be indexed (as long as it can be implements DenseMapInfo).
+/// This implementation allows any type with a DenseMapInfo specialization to
+/// be indexed. Elements are allocated together and iterated in insertion order.
 ///
 /// Here is a simple example using integers:
 ///
@@ -44,10 +43,9 @@ namespace llvm {
 ///  EC.insert(4); EC.insert(5);        // insert 4, 5 into own sets
 ///  EC.unionSets(5, 1);                // merge the set for 1 with 5's set.
 ///
-///  for (EquivalenceClasses<int>::iterator I = EC.begin(), E = EC.end();
-///       I != E; ++I) {           // Iterate over all of the equivalence sets.
+///  for (const auto *I : EC) {    // Iterate over all of the equivalence sets.
 ///    if (!I->isLeader()) continue;   // Ignore non-leader sets.
-///    for (EquivalenceClasses<int>::member_iterator MI = EC.member_begin(I);
+///    for (EquivalenceClasses<int>::member_iterator MI = EC.member_begin(*I);
 ///         MI != EC.member_end(); ++MI)   // Loop over members in this set.
 ///      cerr << *MI << " ";  // Print member.
 ///    cerr << "\n";   // Finish set.
@@ -116,7 +114,7 @@ template <class ElemTy> class EquivalenceClasses {
   /// ECValues, it just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
 
-  /// List of all members, used to provide a determinstic iteration order.
+  /// List of all members, used to provide a deterministic iteration order.
   SmallVector<const ECValue *> Members;
 
   mutable BumpPtrAllocator ECValueAllocator;
@@ -128,8 +126,11 @@ public:
   }
 
   EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
+    if (this == &RHS)
+      return *this;
     TheMapping.clear();
     Members.clear();
+    ECValueAllocator.Reset();
     for (const auto &E : RHS)
       if (E->isLeader()) {
         member_iterator MI = RHS.member_begin(*E);

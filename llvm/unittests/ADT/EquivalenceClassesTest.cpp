@@ -7,21 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace llvm {
-
-TEST(EquivalenceClassesTest, CopyAssignemnt) {
-  EquivalenceClasses<int> EC, Copy;
-  EC.insert(1);
-  EC.insert(4);
-  EquivalenceClasses<int> &Ref = Copy = EC;
-  EXPECT_EQ(Copy.getNumClasses(), 2u);
-  EXPECT_EQ(&Ref, &Copy);
-}
 
 TEST(EquivalenceClassesTest, NoMerges) {
   EquivalenceClasses<int> EqClasses;
@@ -76,26 +66,8 @@ TEST(EquivalenceClassesTest, TwoSets) {
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
 }
 
-TEST(EquivalenceClassesTest, MembersIterator) {
-  EquivalenceClasses<int> EC;
-  EC.unionSets(1, 2);
-  EC.insert(4);
-  EC.insert(5);
-  EC.unionSets(5, 1);
-  EXPECT_EQ(EC.getNumClasses(), 2u);
-
-  EXPECT_THAT(EC.members(4), testing::ElementsAre(4));
-  EXPECT_THAT(EC.members(1), testing::ElementsAre(5, 1, 2));
-}
-
-// Type-parameterized tests: Run the same test cases with different element
-// types.
-template <typename T> class ParameterizedTest : public testing::Test {};
-
-TYPED_TEST_SUITE_P(ParameterizedTest);
-
-TYPED_TEST_P(ParameterizedTest, MultipleSets) {
-  TypeParam EqClasses;
+TEST(EquivalenceClassesTest, MultipleSets) {
+  EquivalenceClasses<int> EqClasses;
   // Split numbers from [0, 100) into sets so that values in the same set have
   // equal remainders (mod 17).
   for (int i = 0; i < 100; i++)
@@ -107,6 +79,45 @@ TYPED_TEST_P(ParameterizedTest, MultipleSets) {
         EXPECT_TRUE(EqClasses.isEquivalent(i, j));
       else
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
+}
+
+TEST(EquivalenceClassesTest, InsertionOrder) {
+  EquivalenceClasses<int> EqClasses;
+  for (int Value : {9, 1, 5, 1})
+    EqClasses.insert(Value);
+  SmallVector<int> Values;
+  for (const auto *Entry : EqClasses)
+    Values.push_back(Entry->getData());
+  EXPECT_EQ(Values, (SmallVector<int>{9, 1, 5}));
+}
+
+TEST(EquivalenceClassesTest, StableNodesAfterGrowth) {
+  EquivalenceClasses<int> EqClasses;
+  const auto &First = EqClasses.insert(0);
+  for (int Value = 1; Value < 4096; ++Value)
+    EqClasses.unionSets(0, Value);
+  EXPECT_EQ(EqClasses.findLeader(First), EqClasses.findLeader(4095));
+  EXPECT_EQ(
+      std::distance(EqClasses.member_begin(First), EqClasses.member_end()),
+      4096);
+}
+
+TEST(EquivalenceClassesTest, CopyAndAssignment) {
+  EquivalenceClasses<int> Original;
+  Original.unionSets(1, 2);
+  Original.insert(3);
+  EquivalenceClasses<int> Copy(Original);
+  Copy.unionSets(2, 3);
+  EXPECT_FALSE(Original.isEquivalent(1, 3));
+  EXPECT_TRUE(Copy.isEquivalent(1, 3));
+  Copy = Original;
+  EXPECT_TRUE(Copy.isEquivalent(1, 2));
+  EXPECT_FALSE(Copy.isEquivalent(1, 3));
+  EXPECT_EQ(Copy.getNumClasses(), 2u);
+  auto &Alias = Copy;
+  Copy = Alias;
+  EXPECT_TRUE(Copy.isEquivalent(1, 2));
+  EXPECT_EQ(Copy.getNumClasses(), 2u);
 }
 
 } // llvm

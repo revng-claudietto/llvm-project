@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-a57-fp-load-balancing"
@@ -368,10 +369,8 @@ bool AArch64A57FPLoadBalancing::runOnBasicBlock(MachineBasicBlock &MBB) {
 
   // Convert the EquivalenceClasses to a simpler set of sets.
   std::vector<std::vector<Chain*> > V;
-  for (const auto &E : EC) {
-    if (!E->isLeader())
-      continue;
-    std::vector<Chain *> Cs(EC.member_begin(*E), EC.member_end());
+  for (auto I = EC.begin(), E = EC.end(); I != E; ++I) {
+    std::vector<Chain *> Cs(EC.member_begin(**I), EC.member_end());
     if (Cs.empty()) continue;
     V.push_back(std::move(Cs));
   }
